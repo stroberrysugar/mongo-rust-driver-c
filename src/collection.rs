@@ -2,34 +2,34 @@
 //!
 //! `Collection` is the main type used when accessing collections.
 
-use std::ptr;
-use std::ffi::CStr;
 use std::borrow::Cow;
+use std::ffi::CStr;
+use std::ptr;
 use std::time::Duration;
 
-use crate::mongoc::bindings;
 use crate::bsonc;
+use crate::mongoc::bindings;
 
 use bson::Document;
 
-use super::{Result,BulkOperationResult,BulkOperationError};
-use super::CommandAndFindOptions;
-use super::{BsoncError,InvalidParamsError};
 use super::bsonc::Bsonc;
 use super::client::Client;
 use super::cursor;
-use super::cursor::{Cursor,TailingCursor};
+use super::cursor::{Cursor, TailingCursor};
 use super::database::Database;
-use super::flags::{Flags,FlagsValue,InsertFlag,QueryFlag,RemoveFlag,UpdateFlag};
-use super::write_concern::WriteConcern;
+use super::flags::{Flags, FlagsValue, InsertFlag, QueryFlag, RemoveFlag, UpdateFlag};
 use super::read_prefs::ReadPrefs;
+use super::write_concern::WriteConcern;
+use super::CommandAndFindOptions;
+use super::{BsoncError, InvalidParamsError};
+use super::{BulkOperationError, BulkOperationResult, Result};
 
 #[doc(hidden)]
 pub enum CreatedBy<'a> {
     BorrowedClient(&'a Client<'a>),
     OwnedClient(Client<'a>),
     BorrowedDatabase(&'a Database<'a>),
-    OwnedDatabase(Database<'a>)
+    OwnedDatabase(Database<'a>),
 }
 
 /// Provides access to a collection for most CRUD operations, I.e. insert, update, delete, find, etc.
@@ -38,7 +38,7 @@ pub enum CreatedBy<'a> {
 /// instance.
 pub struct Collection<'a> {
     _created_by: CreatedBy<'a>,
-    inner:      *mut bindings::mongoc_collection_t
+    inner: *mut bindings::mongoc_collection_t,
 }
 
 /// Options to configure an aggregate operation.
@@ -48,7 +48,7 @@ pub struct AggregateOptions {
     /// Options for the aggregate
     pub options: Option<Document>,
     /// Read prefs to use
-    pub read_prefs:  Option<ReadPrefs>
+    pub read_prefs: Option<ReadPrefs>,
 }
 
 impl AggregateOptions {
@@ -58,7 +58,7 @@ impl AggregateOptions {
         AggregateOptions {
             query_flags: Flags::new(),
             options: None,
-            read_prefs: None
+            read_prefs: None,
         }
     }
 }
@@ -66,9 +66,9 @@ impl AggregateOptions {
 /// Options to configure a bulk operation.
 pub struct BulkOperationOptions {
     /// If the operations must be performed in order
-    pub ordered:       bool,
+    pub ordered: bool,
     /// `WriteConcern` to use
-    pub write_concern: WriteConcern
+    pub write_concern: WriteConcern,
 }
 
 impl BulkOperationOptions {
@@ -76,8 +76,8 @@ impl BulkOperationOptions {
     /// when creating a `BulkOperation`.
     pub fn default() -> BulkOperationOptions {
         BulkOperationOptions {
-            ordered:       false,
-            write_concern: WriteConcern::default()
+            ordered: false,
+            write_concern: WriteConcern::default(),
         }
     }
 }
@@ -85,27 +85,27 @@ impl BulkOperationOptions {
 /// Options to configure a find and modify operation.
 pub struct FindAndModifyOptions {
     /// Sort order for the query
-    pub sort:   Option<Document>,
+    pub sort: Option<Document>,
     /// If the new version of the document should be returned
-    pub new:    bool,
+    pub new: bool,
     /// The fields to return
-    pub fields: Option<Document>
+    pub fields: Option<Document>,
 }
 
 impl FindAndModifyOptions {
     /// Default options used if none are provided.
     pub fn default() -> FindAndModifyOptions {
         FindAndModifyOptions {
-            sort:   None,
-            new:    false,
-            fields: None
+            sort: None,
+            new: false,
+            fields: None,
         }
     }
 
     fn fields_bsonc(&self) -> Option<bsonc::Bsonc> {
         match self.fields {
             Some(ref f) => Some(bsonc::Bsonc::from_document(f).unwrap()),
-            None => None
+            None => None,
         }
     }
 }
@@ -117,7 +117,7 @@ pub enum FindAndModifyOperation<'a> {
     /// Upsert the matching documents
     Upsert(&'a Document),
     /// Remove the matching documents
-    Remove
+    Remove,
 }
 
 /// Options to configure a count operation.
@@ -125,13 +125,13 @@ pub struct CountOptions {
     /// The query flags to use
     pub query_flags: Flags<QueryFlag>,
     /// Number of results to skip, zero to ignore
-    pub skip:        u32,
+    pub skip: u32,
     /// Limit to the number of results, zero to ignore
-    pub limit:       u32,
+    pub limit: u32,
     /// Optional extra keys to add to the count
-    pub opts:        Option<Document>,
+    pub opts: Option<Document>,
     /// Read prefs to use
-    pub read_prefs:  Option<ReadPrefs>
+    pub read_prefs: Option<ReadPrefs>,
 }
 
 impl CountOptions {
@@ -139,10 +139,10 @@ impl CountOptions {
     pub fn default() -> CountOptions {
         CountOptions {
             query_flags: Flags::new(),
-            skip:        0,
-            limit:       0,
-            opts:        None,
-            read_prefs:  None
+            skip: 0,
+            limit: 0,
+            opts: None,
+            read_prefs: None,
         }
     }
 }
@@ -150,17 +150,17 @@ impl CountOptions {
 /// Options to configure an insert operation.
 pub struct InsertOptions {
     /// Flags to use
-    pub insert_flags:  Flags<InsertFlag>,
+    pub insert_flags: Flags<InsertFlag>,
     /// Write concern to use
-    pub write_concern: WriteConcern
+    pub write_concern: WriteConcern,
 }
 
 impl InsertOptions {
     /// Default options used if none are provided.
     pub fn default() -> InsertOptions {
         InsertOptions {
-            insert_flags:  Flags::new(),
-            write_concern: WriteConcern::default()
+            insert_flags: Flags::new(),
+            write_concern: WriteConcern::default(),
         }
     }
 }
@@ -168,17 +168,17 @@ impl InsertOptions {
 /// Options to configure a remove operation.
 pub struct RemoveOptions {
     /// Flags to use
-    pub remove_flags:  Flags<RemoveFlag>,
+    pub remove_flags: Flags<RemoveFlag>,
     /// Write concern to use
-    pub write_concern: WriteConcern
+    pub write_concern: WriteConcern,
 }
 
 impl RemoveOptions {
     /// Default options used if none are provided.
     pub fn default() -> RemoveOptions {
         RemoveOptions {
-            remove_flags:  Flags::new(),
-            write_concern: WriteConcern::default()
+            remove_flags: Flags::new(),
+            write_concern: WriteConcern::default(),
         }
     }
 }
@@ -186,17 +186,17 @@ impl RemoveOptions {
 /// Options to configure an update operation.
 pub struct UpdateOptions {
     /// Flags to use
-    pub update_flags:  Flags<UpdateFlag>,
+    pub update_flags: Flags<UpdateFlag>,
     /// Write concern to use
-    pub write_concern: WriteConcern
+    pub write_concern: WriteConcern,
 }
 
 impl UpdateOptions {
     /// Default options used if none are provided.
     pub fn default() -> UpdateOptions {
         UpdateOptions {
-            update_flags:  Flags::new(),
-            write_concern: WriteConcern::default()
+            update_flags: Flags::new(),
+            write_concern: WriteConcern::default(),
         }
     }
 }
@@ -206,7 +206,7 @@ pub struct TailOptions {
     /// Duration to wait before checking for new results
     pub wait_duration: Duration,
     /// Maximum number of retries if there is an error
-    pub max_retries:   u32
+    pub max_retries: u32,
 }
 
 impl TailOptions {
@@ -214,7 +214,7 @@ impl TailOptions {
     pub fn default() -> TailOptions {
         TailOptions {
             wait_duration: Duration::from_millis(500),
-            max_retries:  5
+            max_retries: 5,
         }
     }
 }
@@ -223,12 +223,12 @@ impl<'a> Collection<'a> {
     #[doc(hidden)]
     pub fn new(
         created_by: CreatedBy<'a>,
-        inner:      *mut bindings::mongoc_collection_t
+        inner: *mut bindings::mongoc_collection_t,
     ) -> Collection<'a> {
         assert!(!inner.is_null());
         Collection {
             _created_by: created_by,
-            inner:       inner
+            inner: inner,
         }
     }
 
@@ -238,10 +238,10 @@ impl<'a> Collection<'a> {
     pub fn aggregate(
         &'a self,
         pipeline: &Document,
-        options: Option<&AggregateOptions>
+        options: Option<&AggregateOptions>,
     ) -> Result<Cursor<'a>> {
         let default_options = AggregateOptions::default();
-        let options         = options.unwrap_or(&default_options);
+        let options = options.unwrap_or(&default_options);
 
         let cursor_ptr = unsafe {
             bindings::mongoc_collection_aggregate(
@@ -249,26 +249,24 @@ impl<'a> Collection<'a> {
                 options.query_flags.flags(),
                 Bsonc::from_document(pipeline)?.inner(),
                 match options.options {
-                    Some(ref o) => {
-                        Bsonc::from_document(o)?.inner()
-                    },
-                    None => ptr::null()
+                    Some(ref o) => Bsonc::from_document(o)?.inner(),
+                    None => ptr::null(),
                 },
                 match options.read_prefs {
                     Some(ref prefs) => prefs.inner(),
-                    None => ptr::null()
-                }
+                    None => ptr::null(),
+                },
             )
         };
 
         if cursor_ptr.is_null() {
-            return Err(InvalidParamsError.into())
+            return Err(InvalidParamsError.into());
         }
 
         Ok(Cursor::new(
             cursor::CreatedBy::Collection(self),
             cursor_ptr,
-            None
+            None,
         ))
     }
 
@@ -277,13 +275,13 @@ impl<'a> Collection<'a> {
     pub fn command(
         &'a self,
         command: Document,
-        options: Option<&CommandAndFindOptions>
+        options: Option<&CommandAndFindOptions>,
     ) -> Result<Cursor<'a>> {
         assert!(!self.inner.is_null());
 
         let default_options = CommandAndFindOptions::default();
-        let options         = options.unwrap_or(&default_options);
-        let fields_bsonc    = options.fields_bsonc();
+        let options = options.unwrap_or(&default_options);
+        let fields_bsonc = options.fields_bsonc();
 
         let cursor_ptr = unsafe {
             bindings::mongoc_collection_command(
@@ -295,23 +293,23 @@ impl<'a> Collection<'a> {
                 Bsonc::from_document(&command)?.inner(),
                 match fields_bsonc {
                     Some(ref f) => f.inner(),
-                    None => ptr::null()
+                    None => ptr::null(),
                 },
                 match options.read_prefs {
                     Some(ref prefs) => prefs.inner(),
-                    None => ptr::null()
-                }
+                    None => ptr::null(),
+                },
             )
         };
 
         if cursor_ptr.is_null() {
-            return Err(InvalidParamsError.into())
+            return Err(InvalidParamsError.into());
         }
 
         Ok(Cursor::new(
             cursor::CreatedBy::Collection(self),
             cursor_ptr,
-            fields_bsonc
+            fields_bsonc,
         ))
     }
 
@@ -319,7 +317,7 @@ impl<'a> Collection<'a> {
     pub fn command_simple(
         &'a self,
         command: Document,
-        read_prefs: Option<&ReadPrefs>
+        read_prefs: Option<&ReadPrefs>,
     ) -> Result<Document> {
         assert!(!self.inner.is_null());
 
@@ -334,17 +332,17 @@ impl<'a> Collection<'a> {
                 Bsonc::from_document(&command)?.inner(),
                 match read_prefs {
                     Some(ref prefs) => prefs.inner(),
-                    None => ptr::null()
+                    None => ptr::null(),
                 },
                 reply.mut_inner(),
-                error.mut_inner()
+                error.mut_inner(),
             )
         };
 
         if success == 1 {
             match reply.as_document() {
                 Ok(document) => return Ok(document),
-                Err(error)   => return Err(error.into())
+                Err(error) => return Err(error.into()),
             }
         } else {
             Err(error.into())
@@ -355,18 +353,14 @@ impl<'a> Collection<'a> {
     /// The `query` bson is not validated, simply passed along to the server. As such, compatibility and errors should be validated in the appropriate server documentation.
     ///
     /// For more information, see the [query reference](https://docs.mongodb.org/manual/reference/operator/query/) at the MongoDB website.
-    pub fn count(
-        &self,
-        query:   &Document,
-        options: Option<&CountOptions>
-    ) -> Result<i64> {
+    pub fn count(&self, query: &Document, options: Option<&CountOptions>) -> Result<i64> {
         assert!(!self.inner.is_null());
 
         let default_options = CountOptions::default();
-        let options         = options.unwrap_or(&default_options);
-        let opts_bsonc      =  match options.opts {
+        let options = options.unwrap_or(&default_options);
+        let opts_bsonc = match options.opts {
             Some(ref o) => Some(Bsonc::from_document(o)?),
-            None => None
+            None => None,
         };
 
         let mut error = BsoncError::empty();
@@ -379,13 +373,13 @@ impl<'a> Collection<'a> {
                 options.limit as i64,
                 match opts_bsonc {
                     Some(ref o) => o.inner(),
-                    None => ptr::null()
+                    None => ptr::null(),
                 },
                 match options.read_prefs {
                     Some(ref prefs) => prefs.inner(),
-                    None => ptr::null()
+                    None => ptr::null(),
                 },
-                error.mut_inner()
+                error.mut_inner(),
             )
         };
 
@@ -401,19 +395,21 @@ impl<'a> Collection<'a> {
     /// batches.
     pub fn create_bulk_operation(
         &'a self,
-        options: Option<&BulkOperationOptions>
+        options: Option<&BulkOperationOptions>,
     ) -> BulkOperation<'a> {
         assert!(!self.inner.is_null());
 
         let default_options = BulkOperationOptions::default();
-        let options         = options.unwrap_or(&default_options);
+        let options = options.unwrap_or(&default_options);
+
+        let opts = Bsonc::from_document(&doc! {
+            "ordered": options.ordered
+        })
+        .unwrap()
+        .inner();
 
         let inner = unsafe {
-            bindings::mongoc_collection_create_bulk_operation(
-                self.inner,
-                options.ordered as u8,
-                options.write_concern.inner()
-            )
+            bindings::mongoc_collection_create_bulk_operation_with_opts(self.inner, opts)
         };
 
         BulkOperation::new(self, inner)
@@ -423,15 +419,10 @@ impl<'a> Collection<'a> {
     pub fn drop(&mut self) -> Result<()> {
         assert!(!self.inner.is_null());
         let mut error = BsoncError::empty();
-        let success = unsafe {
-            bindings::mongoc_collection_drop(
-                self.inner,
-                error.mut_inner()
-            )
-        };
+        let success = unsafe { bindings::mongoc_collection_drop(self.inner, error.mut_inner()) };
         if success == 0 {
             assert!(!error.is_empty());
-            return Err(error.into())
+            return Err(error.into());
         }
         Ok(())
     }
@@ -442,14 +433,14 @@ impl<'a> Collection<'a> {
     /// as specified by the server documentation. See the example below for how to properly specify additional options to query.
     pub fn find(
         &'a self,
-        query:   &Document,
-        options: Option<&CommandAndFindOptions>
+        query: &Document,
+        options: Option<&CommandAndFindOptions>,
     ) -> Result<Cursor<'a>> {
         assert!(!self.inner.is_null());
 
         let default_options = CommandAndFindOptions::default();
-        let options         = options.unwrap_or(&default_options);
-        let fields_bsonc    = options.fields_bsonc();
+        let options = options.unwrap_or(&default_options);
+        let fields_bsonc = options.fields_bsonc();
 
         let cursor_ptr = unsafe {
             bindings::mongoc_collection_find(
@@ -461,23 +452,23 @@ impl<'a> Collection<'a> {
                 Bsonc::from_document(query)?.inner(),
                 match fields_bsonc {
                     Some(ref f) => f.inner(),
-                    None => ptr::null()
+                    None => ptr::null(),
                 },
                 match options.read_prefs {
                     Some(ref prefs) => prefs.inner(),
-                    None => ptr::null()
-                }
+                    None => ptr::null(),
+                },
             )
         };
 
         if cursor_ptr.is_null() {
-            return Err(InvalidParamsError.into())
+            return Err(InvalidParamsError.into());
         }
 
         Ok(Cursor::new(
             cursor::CreatedBy::Collection(self),
             cursor_ptr,
-            fields_bsonc
+            fields_bsonc,
         ))
     }
 
@@ -486,15 +477,15 @@ impl<'a> Collection<'a> {
     /// an operation that either updates, upserts or removes.
     pub fn find_and_modify(
         &'a self,
-        query:     &Document,
+        query: &Document,
         operation: FindAndModifyOperation<'a>,
-        options:   Option<&FindAndModifyOptions>
+        options: Option<&FindAndModifyOptions>,
     ) -> Result<Document> {
         assert!(!self.inner.is_null());
 
         let default_options = FindAndModifyOptions::default();
-        let options         = options.unwrap_or(&default_options);
-        let fields_bsonc    = options.fields_bsonc();
+        let options = options.unwrap_or(&default_options);
+        let fields_bsonc = options.fields_bsonc();
 
         // Bsonc to store the reply
         let mut reply = Bsonc::new();
@@ -504,16 +495,14 @@ impl<'a> Collection<'a> {
         // Do these before the mongoc call to make sure we keep
         // them around long enough.
         let sort_bsonc = match options.sort {
-            Some(ref doc) => {
-                Some(Bsonc::from_document(doc)?)
-            },
-            None => None
+            Some(ref doc) => Some(Bsonc::from_document(doc)?),
+            None => None,
         };
         let update_bsonc = match operation {
             FindAndModifyOperation::Update(ref doc) | FindAndModifyOperation::Upsert(ref doc) => {
                 Some(Bsonc::from_document(doc)?)
-            },
-            FindAndModifyOperation::Remove => None
+            }
+            FindAndModifyOperation::Remove => None,
         };
 
         let success = unsafe {
@@ -522,34 +511,34 @@ impl<'a> Collection<'a> {
                 Bsonc::from_document(&query)?.inner(),
                 match sort_bsonc {
                     Some(ref s) => s.inner(),
-                    None => ptr::null()
+                    None => ptr::null(),
                 },
                 match update_bsonc {
                     Some(ref u) => u.inner(),
-                    None => ptr::null()
+                    None => ptr::null(),
                 },
                 match fields_bsonc {
                     Some(ref f) => f.inner(),
-                    None => ptr::null()
+                    None => ptr::null(),
                 },
                 match operation {
                     FindAndModifyOperation::Remove => true,
-                    _ => false
+                    _ => false,
                 } as u8,
                 match operation {
                     FindAndModifyOperation::Upsert(_) => true,
-                    _ => false
+                    _ => false,
                 } as u8,
                 options.new as u8,
                 reply.mut_inner(),
-                error.mut_inner()
+                error.mut_inner(),
             )
         };
 
         if success == 1 {
             match reply.as_document() {
                 Ok(document) => return Ok(document),
-                Err(error)   => return Err(error.into())
+                Err(error) => return Err(error.into()),
             }
         } else {
             Err(error.into())
@@ -558,24 +547,18 @@ impl<'a> Collection<'a> {
 
     /// Get the name of the collection.
     pub fn get_name(&self) -> Cow<str> {
-        let cstr = unsafe {
-            CStr::from_ptr(bindings::mongoc_collection_get_name(self.inner))
-        };
+        let cstr = unsafe { CStr::from_ptr(bindings::mongoc_collection_get_name(self.inner)) };
         String::from_utf8_lossy(cstr.to_bytes())
     }
 
     /// Insert document into collection.
     /// If no `_id` element is found in document, then an id will be generated locally and added to the document.
     // TODO: You can retrieve a generated _id from mongoc_collection_get_last_error().
-    pub fn insert(
-        &'a self,
-        document: &Document,
-        options:  Option<&InsertOptions>
-    ) -> Result<()> {
+    pub fn insert(&'a self, document: &Document, options: Option<&InsertOptions>) -> Result<()> {
         assert!(!self.inner.is_null());
 
         let default_options = InsertOptions::default();
-        let options         = options.unwrap_or(&default_options);
+        let options = options.unwrap_or(&default_options);
 
         let mut error = BsoncError::empty();
         let success = unsafe {
@@ -584,7 +567,7 @@ impl<'a> Collection<'a> {
                 options.insert_flags.flags(),
                 Bsonc::from_document(&document)?.inner(),
                 options.write_concern.inner(),
-                error.mut_inner()
+                error.mut_inner(),
             )
         };
 
@@ -598,15 +581,11 @@ impl<'a> Collection<'a> {
     /// Remove documents in the given collection that match selector.
     /// The bson `selector` is not validated, simply passed along as appropriate to the server. As such, compatibility and errors should be validated in the appropriate server documentation.
     ///  If you want to limit deletes to a single document, add the `SingleRemove` flag.
-    pub fn remove(
-        &self,
-        selector: &Document,
-        options:  Option<&RemoveOptions>
-    ) -> Result<()> {
+    pub fn remove(&self, selector: &Document, options: Option<&RemoveOptions>) -> Result<()> {
         assert!(!self.inner.is_null());
 
         let default_options = RemoveOptions::default();
-        let options         = options.unwrap_or(&default_options);
+        let options = options.unwrap_or(&default_options);
 
         let mut error = BsoncError::empty();
         let success = unsafe {
@@ -615,7 +594,7 @@ impl<'a> Collection<'a> {
                 options.remove_flags.flags(),
                 Bsonc::from_document(&selector)?.inner(),
                 options.write_concern.inner(),
-                error.mut_inner()
+                error.mut_inner(),
             )
         };
 
@@ -628,15 +607,11 @@ impl<'a> Collection<'a> {
 
     /// Save a document into the collection. If the document has an `_id` field it will be updated.
     /// Otherwise it will be inserted.
-    pub fn save(
-        &self,
-        document:      &Document,
-        write_concern: Option<&WriteConcern>
-    ) -> Result<()> {
+    pub fn save(&self, document: &Document, write_concern: Option<&WriteConcern>) -> Result<()> {
         assert!(!self.inner.is_null());
 
         let default_write_concern = WriteConcern::default();
-        let write_concern         = write_concern.unwrap_or(&default_write_concern);
+        let write_concern = write_concern.unwrap_or(&default_write_concern);
 
         let mut error = BsoncError::empty();
         let success = unsafe {
@@ -644,7 +619,7 @@ impl<'a> Collection<'a> {
                 self.inner,
                 Bsonc::from_document(&document)?.inner(),
                 write_concern.inner(),
-                error.mut_inner()
+                error.mut_inner(),
             )
         };
 
@@ -660,13 +635,13 @@ impl<'a> Collection<'a> {
     pub fn update(
         &self,
         selector: &Document,
-        update:   &Document,
-        options:  Option<&UpdateOptions>
+        update: &Document,
+        options: Option<&UpdateOptions>,
     ) -> Result<()> {
         assert!(!self.inner.is_null());
 
         let default_options = UpdateOptions::default();
-        let options         = options.unwrap_or(&default_options);
+        let options = options.unwrap_or(&default_options);
 
         let mut error = BsoncError::empty();
         let success = unsafe {
@@ -676,7 +651,7 @@ impl<'a> Collection<'a> {
                 Bsonc::from_document(&selector)?.inner(),
                 Bsonc::from_document(&update)?.inner(),
                 options.write_concern.inner(),
-                error.mut_inner()
+                error.mut_inner(),
             )
         };
 
@@ -702,15 +677,15 @@ impl<'a> Collection<'a> {
     /// to the configured flags if you choose to supply options.
     pub fn tail(
         &'a self,
-        query:        Document,
+        query: Document,
         find_options: Option<CommandAndFindOptions>,
-        tail_options: Option<TailOptions>
+        tail_options: Option<TailOptions>,
     ) -> TailingCursor<'a> {
         TailingCursor::new(
             self,
             query,
             find_options.unwrap_or(CommandAndFindOptions::default()),
-            tail_options.unwrap_or(TailOptions::default())
+            tail_options.unwrap_or(TailOptions::default()),
         )
     }
 }
@@ -731,33 +706,30 @@ impl<'a> Drop for Collection<'a> {
 /// the server in batches. After executing the bulk operation is consumed and cannot be used anymore.
 pub struct BulkOperation<'a> {
     _collection: &'a Collection<'a>,
-    inner:       *mut bindings::mongoc_bulk_operation_t
+    inner: *mut bindings::mongoc_bulk_operation_t,
 }
 
-impl<'a>BulkOperation<'a> {
+impl<'a> BulkOperation<'a> {
     /// Create a new bulk operation, only for internal usage.
     fn new(
         collection: &'a Collection<'a>,
-        inner:      *mut bindings::mongoc_bulk_operation_t
+        inner: *mut bindings::mongoc_bulk_operation_t,
     ) -> BulkOperation<'a> {
         assert!(!inner.is_null());
         BulkOperation {
             _collection: collection,
-            inner:       inner
+            inner: inner,
         }
     }
 
     /// Queue an insert of a single document into a bulk operation.
     /// The insert is not performed until `execute` is called.
-    pub fn insert(
-        &self,
-        document: &Document
-    ) -> Result<()> {
+    pub fn insert(&self, document: &Document) -> Result<()> {
         assert!(!self.inner.is_null());
         unsafe {
             bindings::mongoc_bulk_operation_insert(
                 self.inner,
-                Bsonc::from_document(&document)?.inner()
+                Bsonc::from_document(&document)?.inner(),
             )
         }
         Ok(())
@@ -765,15 +737,12 @@ impl<'a>BulkOperation<'a> {
 
     /// Queue removal of all documents matching the provided selector into a bulk operation.
     /// The removal is not performed until `execute` is called.
-    pub fn remove(
-        &self,
-        selector: &Document
-    ) -> Result<()> {
+    pub fn remove(&self, selector: &Document) -> Result<()> {
         assert!(!self.inner.is_null());
         unsafe {
             bindings::mongoc_bulk_operation_remove(
                 self.inner,
-                Bsonc::from_document(&selector)?.inner()
+                Bsonc::from_document(&selector)?.inner(),
             )
         }
         Ok(())
@@ -781,15 +750,12 @@ impl<'a>BulkOperation<'a> {
 
     /// Queue removal of a single document into a bulk operation.
     /// The removal is not performed until `execute` is called.
-    pub fn remove_one(
-        &self,
-        selector: &Document
-    ) -> Result<()> {
+    pub fn remove_one(&self, selector: &Document) -> Result<()> {
         assert!(!self.inner.is_null());
         unsafe {
             bindings::mongoc_bulk_operation_remove_one(
                 self.inner,
-                Bsonc::from_document(&selector)?.inner()
+                Bsonc::from_document(&selector)?.inner(),
             )
         }
         Ok(())
@@ -801,7 +767,7 @@ impl<'a>BulkOperation<'a> {
         &self,
         selector: &Document,
         document: &Document,
-        upsert:   bool
+        upsert: bool,
     ) -> Result<()> {
         assert!(!self.inner.is_null());
         unsafe {
@@ -809,7 +775,7 @@ impl<'a>BulkOperation<'a> {
                 self.inner,
                 Bsonc::from_document(&selector)?.inner(),
                 Bsonc::from_document(&document)?.inner(),
-                upsert as u8
+                upsert as u8,
             )
         }
         Ok(())
@@ -820,19 +786,14 @@ impl<'a>BulkOperation<'a> {
     ///
     /// TODO: document must only contain fields whose key starts
     /// with $, these is no error handling for this.
-    pub fn update_one(
-        &self,
-        selector: &Document,
-        document: &Document,
-        upsert:   bool
-    ) -> Result<()> {
+    pub fn update_one(&self, selector: &Document, document: &Document, upsert: bool) -> Result<()> {
         assert!(!self.inner.is_null());
         unsafe {
             bindings::mongoc_bulk_operation_update_one(
                 self.inner,
                 Bsonc::from_document(&selector)?.inner(),
                 Bsonc::from_document(&document)?.inner(),
-                upsert as u8
+                upsert as u8,
             )
         }
         Ok(())
@@ -843,19 +804,14 @@ impl<'a>BulkOperation<'a> {
     ///
     /// TODO: document must only contain fields whose key starts
     /// with $, these is no error handling for this.
-    pub fn update(
-        &self,
-        selector: &Document,
-        document: &Document,
-        upsert:   bool
-    ) -> Result<()> {
+    pub fn update(&self, selector: &Document, document: &Document, upsert: bool) -> Result<()> {
         assert!(!self.inner.is_null());
         unsafe {
             bindings::mongoc_bulk_operation_update(
                 self.inner,
                 Bsonc::from_document(&selector)?.inner(),
                 Bsonc::from_document(&document)?.inner(),
-                upsert as u8
+                upsert as u8,
             )
         }
         Ok(())
@@ -880,19 +836,27 @@ impl<'a>BulkOperation<'a> {
             bindings::mongoc_bulk_operation_execute(
                 self.inner,
                 reply.mut_inner(),
-                error.mut_inner()
+                error.mut_inner(),
             )
         };
 
         let document = match reply.as_document() {
             Ok(document) => document,
-            Err(error)   => return Err(BulkOperationError{error: error.into(), reply: doc!{}})
+            Err(error) => {
+                return Err(BulkOperationError {
+                    error: error.into(),
+                    reply: doc! {},
+                })
+            }
         };
 
         if return_value != 0 {
             Ok(document)
         } else {
-            Err(BulkOperationError{error: error.into(), reply: document})
+            Err(BulkOperationError {
+                error: error.into(),
+                reply: document,
+            })
         }
     }
 }
